@@ -1,0 +1,28 @@
+{
+  "name": "sc-query",
+  "version": "0.0.0",
+  "description": "A query module for datajs",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "./node_modules/.bin/forever start server/query.js",
+    "posttest": "./node_modules/.bin/forever stop server/query.js",
+    "test": "mocha"
+  },
+  "author": "David Tsuji",
+  "license": "MIT",
+  "devDependencies": {
+    "should": "~3.0.1",
+    "sinon": "~1.7.3",
+    "forever": "~0.10.11",
+    "express": "~3.4.8"
+  },
+  "dependencies": {
+    "q": "~1.0.0",
+    "sc-optionify": "0.0.x",
+    "sc-request": "0.0.x",
+    "sc-schemajs": "0.0.x",
+    "sc-querystring": "0.0.x",
+    "sc-is": "0.0.x",
+    "sc-useify": "0.0.x"
+  }
+}
