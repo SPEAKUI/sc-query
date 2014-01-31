@@ -196,7 +196,7 @@ Query.prototype.execute = function () {
 
     // middlewareData = utils.getResponseObject( utils.is.not.an.array( sanitizedEntities ) ? [] : sanitizedEntities, utils.is.array( sanitizedEntities ) ? null : sanitizedEntities, res );
 
-    self.use.run( response, function ( error, middlewareResponse ) {
+    self.middleware( response, function ( error, middlewareResponse ) {
       middlewareResponse = utils.is.not.empty( middlewareResponse ) ? middlewareResponse : error instanceof Error ? null : error;
       error = error instanceof Error ? error : null;
 
@@ -216,4 +216,5 @@ Query.prototype.execute = function () {
 utils.optionify( Query );
 utils.useify( Query );
 
-module.exports = Query;
+exports = module.exports = Query;
+exports.utils = utils;
