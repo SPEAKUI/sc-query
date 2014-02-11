@@ -1,21 +1,21 @@
-var utils = require( "../utils" ),
-  config = require( "../config.json" ),
-  q = require( "q" ),
-  Query = require( ".." ),
-  sinon = require( "sinon" ),
-  dummy = require( "./index.test.json" ),
-  should = require( "should" );
+var Query = scquery;
+
+var config = {
+  defaults: {
+    defaultHttpMethod: "get"
+  }
+};
 
 describe( "Query", function () {
 
   it( "should set a parameter", function () {
 
-    var query = new Query( "/api/test", "get" );
+    var query = new Query( "http://localhost:3000/api/test", "get" );
 
     query.parameter( "color", "red" ).parameter( "chicken", "tasty" );
 
-    should.strictEqual( query.parameter( "color" ), query.parameters.color );
-    should.strictEqual( query.parameter( "chicken" ), query.parameters.chicken );
+    query.parameters.color.should.equal( query.parameter( "color" ) );
+    query.parameters.chicken.should.equal( query.parameter( "chicken" ) );
     Object.keys( query.parameters ).should.have.a.lengthOf( 2 );
 
   } );
@@ -30,7 +30,7 @@ describe( "Query", function () {
 
   it( "should set options", function () {
 
-    var query = new Query( "/api/test", "get" );
+    var query = new Query( "http://localhost:3000/api/test", "get" );
 
     query.option( "color", "red" );
     query.options.should.have.a.property( "color", "red" );
@@ -42,7 +42,7 @@ describe( "Query", function () {
 
   it( "should return a promise and execute", function ( done ) {
 
-    var query = new Query( "http://localhost:3000/api/test", "get", {
+    var query = new Query( "http://localhost:3000/api/food", "post", {
       single: true
     } );
 
@@ -62,21 +62,21 @@ describe( "Query", function () {
 
   it( "should add middleware, execute and ensure the middleware has affected the response", function ( done ) {
 
-    var query = new Query( "http://localhost:3000/api/test", "get", {
+    var query = new Query( "http://localhost:3000/api/food", "post", {
       single: true
     } );
 
-    Query.use( function ( _res, _next ) {
+    Query.use( "postRequest", function ( _res, _next ) {
 
       _res.chicken = "really tasty";
-      _next( _res );
+      _next( null, _res );
 
     } );
 
-    Query.use( function ( _res, _next ) {
+    Query.use( "postRequest", function ( _error, _res, _next ) {
 
       _res.duck = "delicious";
-      _next( _res );
+      _next( _error, _res );
 
     } );
 

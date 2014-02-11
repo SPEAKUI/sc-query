@@ -1,11 +1,14 @@
-var express = require( 'express' );
-var app = express();
+var express = require( 'express' ),
+  app = express(),
+  dummy = require( "../test/index.test.json" );
 
 app.use( express.json() );
 app.use( express.urlencoded() );
 app.use( express.logger( "dev" ) );
+app.use( app.router );
+app.use( express.static( __dirname + "/../" ) );
 
-app.get( '/api/test', function ( req, res ) {
+app.post( "/api/food", function ( req, res ) {
   res.json( req.body );
 } );
 

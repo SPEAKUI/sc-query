@@ -1,31 +1,6 @@
 var q = require( "q" ),
   config = require( "./config.json" ),
-  utils = require( "./utils" ),
-  // Entity = require( "./entity" ),
-  datajs;
-
-var buildData = function () {
-  var self = this;
-
-  if ( /^get$/i.test( self.type ) ) {
-    return "";
-  } else {
-    return self.parameters;
-  }
-};
-
-var buildUrl = function () {
-  var self = this,
-    querystring;
-
-  if ( /^get$/i.test( self.type ) ) {
-    querystring = utils.querystring.stringify( self.parameters );
-    return self.url + ( querystring ? "?" : "" ) + querystring;
-  } else {
-    return self.url;
-  }
-
-};
+  utils = require( "./utils" );
 
 /**
  * Query object used to construct a proper query in a fluent way
@@ -37,8 +12,6 @@ var buildUrl = function () {
  */
 var Query = function ( url, type, options ) {
   var self = this;
-
-  // datajs = require( "./index" );
 
   self.url = url;
   self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
@@ -121,12 +94,9 @@ Query.prototype.parameter = function ( key, value ) {
  */
 Query.prototype.execute = function () {
   var self = this,
-    // promise,
+    preRequestDeferred = q.defer(),
     requestData,
     defer = q.defer();
-  // entityService = utils.is.object( self.options[ "entityService" ] ) ? self.options[ "entityService" ] : {},
-  // metadataRequired = entityService.hasOwnProperty( "metadata" ) && !entityService[ "metadata" ] ? true : false,
-  // metadataDefer;
 
   requestData = {
     type: self.type,
@@ -134,81 +104,39 @@ Query.prototype.execute = function () {
     data: self.parameters
   };
 
-  // if ( metadataRequired ) {
+  self.middleware( "preRequest", function ( error, middlewareResponse ) {
 
-  //   metadataDefer = q.defer();
+    middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+    error = error instanceof Error ? error : null;
 
-  //   entityService.once( "metadata:loaded", function ( error, metadata ) {
+    if ( error ) {
+      defer.reject( error );
+    } else {
+      preRequestDeferred.resolve( middlewareResponse );
+    }
 
-  //     if ( error ) {
-  //       return metadataDefer.reject( error );
-  //     }
+  }, requestData );
 
-  //     var schema = new Schema(),
-  //       metadataErrors = schema.validateObject( config.metadata, metadata ),
-  //       metadataHasErrors = false;
+  preRequestDeferred.promise.then( function ( preRequestResponse ) {
 
-  //     Object.keys( metadataErrors ).forEach( function ( metadataErrorKey ) {
+    utils.request( preRequestResponse ).then( function ( postRequestResponse ) {
 
-  //       if ( metadataHasErrors === false && metadataErrors[ metadataErrorKey ] !== void 0 ) {
-  //         metadataHasErrors = true;
-  //       }
+      self.middleware( "postRequest", function ( error, middlewareResponse ) {
 
-  //     } );
+        middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+        error = error instanceof Error ? error : null;
 
-  //     if ( metadataHasErrors === true ) {
-  //       metadataDefer.reject( new Error( "The metadata returned by the server is invalid" ) );
-  //     } else {
-  //       utils.request( requestData ).then( metadataDefer.resolve ).fail( metadataDefer.reject );
-  //     }
+        if ( error ) {
+          defer.reject( error );
+        } else {
+          defer.resolve( middlewareResponse );
+        }
 
-  //   } );
+      }, postRequestResponse );
 
-  //   promise = metadataDefer.promise;
+    } ).fail( defer.reject );
 
-  // } else {
-
-  //    promise = utils.request( requestData );
-
-  // }
-
-  utils.request( requestData ).then( function ( response ) {
-
-    // TODO: put back into the entity or datajs
-    // var entities = utils.is.array( res ) ? res : [],
-    //   entity = utils.is.object( res ) ? res : {},
-    //   schema = new Schema(),
-    //   raw = self.options[ "raw" ] === true,
-    //   sanitizedEntities = [],
-    //   middlewareData;
-
-    // if ( self.options[ "single" ] === true ) {
-
-    //   sanitizedEntities = raw || !entityService[ "hasMetaData" ] ? entity : new Entity( schema.sanitize( entityService.metadata.entity, entity ), entityService.metadata, self.options );
-
-    // } else {
-
-    //   entities.forEach( function ( entity ) {
-    //     sanitizedEntities.push( raw || !entityService[ "hasMetaData" ] ? entity : new Entity( schema.sanitize( entityService.metadata.entity, entity ), entityService.metadata, self.options ) );
-    //   } );
-
-    // }
-
-    // middlewareData = utils.getResponseObject( utils.is.not.an.array( sanitizedEntities ) ? [] : sanitizedEntities, utils.is.array( sanitizedEntities ) ? null : sanitizedEntities, res );
-
-    self.middleware( response, function ( error, middlewareResponse ) {
-      middlewareResponse = utils.is.not.empty( middlewareResponse ) ? middlewareResponse : error instanceof Error ? null : error;
-      error = error instanceof Error ? error : null;
-
-      if ( error ) {
-        defer.reject( error );
-      } else {
-        defer.resolve( middlewareResponse );
-      }
-      // defer.resolve( middlewareResponse && middlewareResponse !== middlewareData ? middlewareResponse : res );
-    } );
-
-  } ).fail( defer.reject ); // TODO: test this
+  } ).fail( defer.reject );
 
   return defer.promise;
 };
