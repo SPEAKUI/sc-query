@@ -4,6 +4,7 @@
   "description": "A query module for datajs",
   "main": "index.js",
   "scripts": {
+    "prepublish": "npm test --ignore-scripts",
     "pretest": "./node_modules/.bin/forever start server/query.js",
     "posttest": "./node_modules/.bin/forever stop server/query.js",
     "test": "./node_modules/.bin/mocha-phantomjs -p ./node_modules/.bin/phantomjs -s localToRemoteUrlAccessEnabled=true -s webSecurityEnabled=false test/index.test.html"
