@@ -153,7 +153,7 @@ utils.useify( Query );
 
 exports = module.exports = Query;
 exports.utils = utils;
-},{"./config.json":1,"./utils":28,"q":4}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./utils":26,"q":4}],3:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2347,60 +2347,6 @@ module.exports = function(val){
 };
 
 },{}],13:[function(_dereq_,module,exports){
-var is = _dereq_( "sc-is" );
-
-exports.stringify = function ( data ) {
-  var parameters = [];
-
-  data = is.object( data ) ? data : {};
-
-  Object.keys( data )
-    .forEach( function ( key ) {
-      var value = data[ key ],
-        valueToEncode = value;
-
-      switch ( true ) {
-      case is.object( value ) || is.array( value ):
-        valueToEncode = JSON.stringify( value );
-        break;
-      case is.date( value ):
-        valueToEncode = JSON.stringify( value ).replace( /^"|"$/g, "" );
-        break;
-      }
-      parameters.push( encodeURIComponent( key ) + "=" + encodeURIComponent( valueToEncode ) );
-    } );
-
-  return parameters.join( "&" );
-};
-
-exports.parse = function ( querystring ) {
-  if ( is.not.a.string( querystring ) || querystring === "" ) {
-    return {};
-  }
-
-  var data = {},
-    querystringKeyValuesMatches = querystring.match( /(&?([^\s\?=]+=[^\s\?\&=]+))+/g ),
-    querystringKeyValuesMatch = is.array( querystringKeyValuesMatches ) && is.string( querystringKeyValuesMatches[ 0 ] ) ? querystringKeyValuesMatches[ 0 ] : "",
-    keyValues = querystringKeyValuesMatch.split( "&" );
-
-  keyValues.forEach( function ( keyValueString ) {
-    var keyValueArray = keyValueString.split( "=" ),
-      key = decodeURIComponent( keyValueArray[ 0 ] ),
-      value = decodeURIComponent( keyValueArray[ 1 ] );
-
-    if ( key ) {
-      try {
-        data[ key ] = JSON.parse( value );
-      } catch ( e ) {
-        data[ key ] = value;
-      }
-    }
-
-  } );
-
-  return data;
-};
-},{"sc-is":5}],14:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2412,7 +2358,7 @@ module.exports={
     "malformedServerResponse": "Malformed server response. Expected a JSON object but got plain text"
   }
 }
-},{}],15:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2490,7 +2436,7 @@ exports = module.exports = function ( obj, options ) {
 };
 
 exports.use = Request.use;
-},{"./config.json":14,"q":4,"sc-guid":16,"sc-haskey":17,"sc-is":5,"sc-merge":19,"sc-queue":21,"sc-useify":27,"superagent":23}],16:[function(_dereq_,module,exports){
+},{"./config.json":13,"q":4,"sc-guid":15,"sc-haskey":16,"sc-is":5,"sc-merge":18,"sc-queue":20,"sc-useify":25,"superagent":21}],15:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
 exports.generate = function () {
@@ -2513,7 +2459,7 @@ exports.isValid = function ( guid ) {
   var rx = new RegExp( guidRx );
   return rx.test( guid );
 };
-},{}],17:[function(_dereq_,module,exports){
+},{}],16:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   has = Object.prototype.hasOwnProperty;
 
@@ -2542,18 +2488,18 @@ module.exports = function ( object, keys, keyType ) {
   return hasKey( object, keys, keyType );
 
 };
-},{"type-component":18}],18:[function(_dereq_,module,exports){
+},{"type-component":17}],17:[function(_dereq_,module,exports){
 module.exports=_dereq_(12)
-},{}],19:[function(_dereq_,module,exports){
+},{}],18:[function(_dereq_,module,exports){
 module.exports=_dereq_(11)
-},{"type-component":20}],20:[function(_dereq_,module,exports){
+},{"type-component":19}],19:[function(_dereq_,module,exports){
 module.exports=_dereq_(12)
-},{}],21:[function(_dereq_,module,exports){
+},{}],20:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
 
-var type = _dereq_( "type-component" ),
+var is = _dereq_( "sc-is" ),
   drainedTimeout,
   noop = function () {};
 
@@ -2561,18 +2507,18 @@ function Queue( worker, concurrency ) {
   var self = this;
 
   self.worker = worker;
-  self.concurrency = type( concurrency ) === "number" ? concurrency : 1;
+  self.concurrency = is.a.number( concurrency ) ? concurrency : 1;
   self.pending = 0;
   self.jobs = [];
+  self.errors = [];
 
 }
 
 Queue.prototype.drain = noop;
-
 Queue.prototype.push = function ( data, callback ) {
   var self = this;
 
-  callback = type( callback ) === "function" ? callback : noop;
+  callback = is.a.func( callback ) ? callback : noop;
 
   self.jobs.push( {
     data: data,
@@ -2599,8 +2545,14 @@ Queue.prototype.exec = function ( job ) {
 
   self.pending++;
 
-  self.worker( job.data, function () {
+  self.worker( job.data, function ( error ) {
 
+    if ( error ) {
+      self.errors.push( {
+        data: job.data,
+        error: error
+      } );
+    }
     job.callback.apply( self, arguments );
     self.pending--;
     self.run();
@@ -2609,7 +2561,8 @@ Queue.prototype.exec = function ( job ) {
 
     drainedTimeout = setTimeout( function () {
       if ( self.jobs.length === 0 ) {
-        self.drain();
+        self.drain( self.errors.length > 0 ? self.errors : null );
+        self.errors = [];
       }
     }, 10 );
 
@@ -2618,9 +2571,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"type-component":22}],22:[function(_dereq_,module,exports){
-module.exports=_dereq_(12)
-},{}],23:[function(_dereq_,module,exports){
+},{"sc-is":5}],21:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -3616,7 +3567,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":24,"reduce":25}],24:[function(_dereq_,module,exports){
+},{"emitter":22,"reduce":23}],22:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -3774,7 +3725,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],25:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -3799,13 +3750,13 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],26:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"middlewareKey": "all"
 	}
 }
-},{}],27:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   config = _dereq_( "./config.json" ),
   noop = function () {};
@@ -3914,14 +3865,13 @@ module.exports = function ( _objectOrFunction ) {
   }
 
 };
-},{"./config.json":26,"sc-is":5}],28:[function(_dereq_,module,exports){
+},{"./config.json":24,"sc-is":5}],26:[function(_dereq_,module,exports){
 module.exports = {
-  querystring: _dereq_( "sc-querystring" ),
   optionify: _dereq_( "sc-optionify" ),
   request: _dereq_( "sc-request" ),
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":5,"sc-optionify":10,"sc-querystring":13,"sc-request":15,"sc-useify":27}]},{},[2])
+},{"sc-is":5,"sc-optionify":10,"sc-request":14,"sc-useify":25}]},{},[2])
 (2)
 });

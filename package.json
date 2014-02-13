@@ -26,8 +26,6 @@
     "q": "~1.0.0",
     "sc-optionify": "0.0.x",
     "sc-request": "0.0.x",
-    "sc-schemajs": "0.0.x",
-    "sc-querystring": "0.0.x",
     "sc-is": "0.0.x",
     "sc-useify": "0.0.x"
   }
