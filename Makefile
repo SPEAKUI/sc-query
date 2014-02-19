@@ -2,7 +2,6 @@ build:
 	@npm install
 	@./node_modules/.bin/browserify index.js -o scquery.js -s scquery
 	@make test
-	@make docs
 
 clean:
 	@rm -rf node_modules
