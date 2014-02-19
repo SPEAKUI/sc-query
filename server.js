@@ -1,6 +1,5 @@
 var express = require( 'express' ),
-  app = express(),
-  dummy = require( "../test/index.test.json" );
+  app = express();
 
 app.use( express.json() );
 app.use( express.urlencoded() );

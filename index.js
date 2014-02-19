@@ -19,14 +19,14 @@ var Query = extendify( {
     self.url = url;
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
     self.options = utils.is.object( options ) ? options : {};
-    self.parameters = {};
+    self.parameters = self.parameters = {};
 
   },
 
   parameter: function ( key, value ) {
     var self = this;
 
-    if ( utils.is.empty( value ) ) {
+    if ( self.parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
       return self.parameters[ key ];
     }
 
@@ -85,6 +85,8 @@ var Query = extendify( {
   }
 
 } );
+
+Query.prototype.param = Query.prototype.parameter;
 
 /**
  * specifying some predicate for filtering a request

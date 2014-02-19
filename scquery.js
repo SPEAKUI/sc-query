@@ -26,14 +26,14 @@ var Query = extendify( {
     self.url = url;
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
     self.options = utils.is.object( options ) ? options : {};
-    self.parameters = {};
+    self.parameters = self.parameters = {};
 
   },
 
   parameter: function ( key, value ) {
     var self = this;
 
-    if ( utils.is.empty( value ) ) {
+    if ( self.parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
       return self.parameters[ key ];
     }
 
@@ -92,6 +92,8 @@ var Query = extendify( {
   }
 
 } );
+
+Query.prototype.param = Query.prototype.parameter;
 
 /**
  * specifying some predicate for filtering a request
@@ -216,7 +218,8 @@ process.chdir = function (dir) {
 };
 
 },{}],4:[function(_dereq_,module,exports){
-(function (process){// vim:ts=4:sts=4:sw=4:
+(function (process){
+// vim:ts=4:sts=4:sw=4:
 /*!
  *
  * Copyright 2009-2012 Kris Kowal under the terms of the MIT
@@ -2151,6 +2154,7 @@ var qEndingLine = captureLine();
 return Q;
 
 });
+
 }).call(this,_dereq_("/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
 },{"/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":3}],5:[function(_dereq_,module,exports){
 var extend = function ( object ) {
@@ -2520,12 +2524,12 @@ module.exports=_dereq_(8)
 module.exports={
   "defaults": {
     "options": {
-      "maxNumberOfConcurrentXhr": 5
+      "maxNumberOfConcurrentXhr": 5,
+      "language": {
+        "undefinedStatusMessage": "The server returned an undefined status message",
+        "malformedServerResponse": "Malformed server response. Expected a JSON object but got plain text"
+      }
     }
-  },
-  "language": {
-    "undefinedStatusMessage": "The server returned an undefined status message",
-    "malformedServerResponse": "Malformed server response. Expected a JSON object but got plain text"
   }
 }
 },{}],21:[function(_dereq_,module,exports){
@@ -2606,6 +2610,7 @@ exports = module.exports = function ( obj, options ) {
 };
 
 exports.use = Request.use;
+exports.useify = Request.useify;
 },{"./config.json":20,"q":4,"sc-guid":22,"sc-haskey":23,"sc-is":12,"sc-merge":25,"sc-queue":27,"sc-useify":32,"superagent":28}],22:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
@@ -2630,34 +2635,7 @@ exports.isValid = function ( guid ) {
   return rx.test( guid );
 };
 },{}],23:[function(_dereq_,module,exports){
-var type = _dereq_( "type-component" ),
-  has = Object.prototype.hasOwnProperty;
-
-function hasKey( object, keys, keyType ) {
-
-  object = type( object ) === "object" ? object : {}, keys = type( keys ) === "array" ? keys : [];
-  keyType = type( keyType ) === "string" ? keyType : "";
-
-  var key = keys.length > 0 ? keys.shift() : "",
-    keyExists = has.call( object, key ),
-    keyValue = keyExists ? object[ key ] : undefined,
-    keyTypeIsCorrect = type( keyValue ) === keyType;
-
-  if ( keys.length > 0 && keyExists ) {
-    return hasKey( object[ key ], keys, keyType );
-  }
-
-  return keys.length > 0 || keyType === "" ? keyExists : keyExists && keyTypeIsCorrect;
-
-}
-
-module.exports = function ( object, keys, keyType ) {
-
-  keys = type( keys ) === "string" ? keys.split( "." ) : [];
-
-  return hasKey( object, keys, keyType );
-
-};
+module.exports=_dereq_(7)
 },{"type-component":24}],24:[function(_dereq_,module,exports){
 module.exports=_dereq_(8)
 },{}],25:[function(_dereq_,module,exports){
