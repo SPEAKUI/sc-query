@@ -27,6 +27,7 @@
     "sc-optionify": "0.0.x",
     "sc-request": "0.0.x",
     "sc-is": "0.0.x",
-    "sc-useify": "0.0.x"
+    "sc-useify": "0.0.x",
+    "sc-extendify": "0.0.x"
   }
 }

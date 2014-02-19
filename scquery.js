@@ -7,6 +7,7 @@ module.exports={
 },{}],2:[function(_dereq_,module,exports){
 var q = _dereq_( "q" ),
   config = _dereq_( "./config.json" ),
+  extendify = _dereq_( "sc-extendify" ),
   utils = _dereq_( "./utils" );
 
 /**
@@ -17,27 +18,80 @@ var q = _dereq_( "q" ),
  * @param {String} url End point url
  * @param {String} type HTTP method
  */
-var Query = function ( url, type, options ) {
-  var self = this;
+var Query = extendify( {
 
-  self.url = url;
-  self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
-  self.options = utils.is.object( options ) ? options : {};
-  self.parameters = {};
+  init: function ( url, type, options ) {
+    var self = this;
 
-};
+    self.url = url;
+    self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
+    self.options = utils.is.object( options ) ? options : {};
+    self.parameters = {};
 
-Query.prototype.parameter = function ( key, value ) {
-  var self = this;
+  },
 
-  if ( utils.is.empty( value ) ) {
-    return self.parameters[ key ];
+  parameter: function ( key, value ) {
+    var self = this;
+
+    if ( utils.is.empty( value ) ) {
+      return self.parameters[ key ];
+    }
+
+    self.parameters[ key ] = value;
+
+    return self;
+  },
+
+  execute: function () {
+    var self = this,
+      preRequestDeferred = q.defer(),
+      requestData,
+      defer = q.defer();
+
+    requestData = {
+      type: self.type,
+      url: self.url,
+      data: self.parameters
+    };
+
+    self.middleware( "preRequest", function ( error, middlewareResponse ) {
+
+      middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+      error = error instanceof Error ? error : null;
+
+      if ( error ) {
+        defer.reject( error );
+      } else {
+        preRequestDeferred.resolve( middlewareResponse );
+      }
+
+    }, requestData );
+
+    preRequestDeferred.promise.then( function ( preRequestResponse ) {
+
+      utils.request( preRequestResponse ).then( function ( postRequestResponse ) {
+
+        self.middleware( "postRequest", function ( error, middlewareResponse ) {
+
+          middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+          error = error instanceof Error ? error : null;
+
+          if ( error ) {
+            defer.reject( error );
+          } else {
+            defer.resolve( middlewareResponse );
+          }
+
+        }, postRequestResponse );
+
+      } ).fail( defer.reject );
+
+    } ).fail( defer.reject );
+
+    return defer.promise;
   }
 
-  self.parameters[ key ] = value;
-
-  return self;
-};
+} );
 
 /**
  * specifying some predicate for filtering a request
@@ -99,61 +153,14 @@ Query.prototype.parameter = function ( key, value ) {
  }
  a Deferred Object
  */
-Query.prototype.execute = function () {
-  var self = this,
-    preRequestDeferred = q.defer(),
-    requestData,
-    defer = q.defer();
-
-  requestData = {
-    type: self.type,
-    url: self.url,
-    data: self.parameters
-  };
-
-  self.middleware( "preRequest", function ( error, middlewareResponse ) {
-
-    middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
-    error = error instanceof Error ? error : null;
-
-    if ( error ) {
-      defer.reject( error );
-    } else {
-      preRequestDeferred.resolve( middlewareResponse );
-    }
-
-  }, requestData );
-
-  preRequestDeferred.promise.then( function ( preRequestResponse ) {
-
-    utils.request( preRequestResponse ).then( function ( postRequestResponse ) {
-
-      self.middleware( "postRequest", function ( error, middlewareResponse ) {
-
-        middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
-        error = error instanceof Error ? error : null;
-
-        if ( error ) {
-          defer.reject( error );
-        } else {
-          defer.resolve( middlewareResponse );
-        }
-
-      }, postRequestResponse );
-
-    } ).fail( defer.reject );
-
-  } ).fail( defer.reject );
-
-  return defer.promise;
-};
 
 utils.optionify( Query );
 utils.useify( Query );
 
 exports = module.exports = Query;
 exports.utils = utils;
-},{"./config.json":1,"./utils":26,"q":4}],3:[function(_dereq_,module,exports){
+exports.config = config;
+},{"./config.json":1,"./utils":33,"q":4,"sc-extendify":6}],3:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2146,6 +2153,229 @@ return Q;
 });
 }).call(this,_dereq_("/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
 },{"/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":3}],5:[function(_dereq_,module,exports){
+var extend = function ( object ) {
+
+	/**
+	 * John Resig's "Simple JavaScript Inheritance"
+	 * @url http://ejohn.org/blog/simple-javascript-inheritance
+	 */
+	var initializing = false,
+		fnTest = /xyz/.test( function () {
+			xyz;
+		} ) ? /\b_super\b/ : /.*/;
+
+	// The base Class implementation (does nothing)
+	var Class = function () {};
+
+	// Create a new Class that inherits from this class
+	Class.extend = function ( prop ) {
+		var _super = this.prototype;
+
+		// Instantiate a base class (but only create the instance,
+		// don't run the init constructor)
+		initializing = true;
+		var prototype = new this();
+		initializing = false;
+
+		// Copy the properties over onto the new prototype
+		for ( var name in prop ) {
+			// Check if we're overwriting an existing function
+			prototype[ name ] = typeof prop[ name ] == "function" &&
+				typeof _super[ name ] == "function" && fnTest.test( prop[ name ] ) ?
+				( function ( name, fn ) {
+				return function () {
+					var tmp = this._super;
+
+					// Add a new ._super() method that is the same method
+					// but on the super-class
+					this._super = _super[ name ];
+
+					// The method only need to be bound temporarily, so we
+					// remove it when we're done executing
+					var ret = fn.apply( this, arguments );
+					this._super = tmp;
+
+					return ret;
+				};
+			} )( name, prop[ name ] ) :
+				prop[ name ];
+		}
+
+		// The dummy class constructor
+		function Class() {
+			// All construction is actually done in the init method
+			if ( !initializing && this.init )
+				this.init.apply( this, arguments );
+		}
+
+		// Populate our constructed prototype object
+		Class.prototype = prototype;
+
+		// Enforce the constructor to be what we expect
+		Class.prototype.constructor = Class;
+
+		// And make this class extendable
+		Class.extend = arguments.callee;
+
+		return Class;
+
+	};
+	/* ---- */
+
+	return Class.extend( object );
+
+};
+
+module.exports = extend;
+},{}],6:[function(_dereq_,module,exports){
+var hasKey = _dereq_( "sc-haskey" ),
+  merge = _dereq_( "sc-merge" ),
+  omit = _dereq_( "sc-omit" ),
+  extend = _dereq_( "./extend.johnresig.js" ),
+  noop = function () {};
+
+var extendify = function ( fn ) {
+
+  var object,
+    protos;
+
+  fn = typeof fn === "function" || typeof fn === "object" ? fn : {};
+  protos = fn.prototype || fn;
+  object = merge( omit( protos, [ "constructor", "init" ] ) );
+  object.init = hasKey( fn, "prototype.constructor", "function" ) ? fn.prototype.constructor : hasKey( fn, "init", "function" ) ? fn.init : typeof fn === "function" ? fn : noop;
+
+  return extend( object );
+
+};
+
+module.exports = extendify;
+},{"./extend.johnresig.js":5,"sc-haskey":7,"sc-merge":9,"sc-omit":11}],7:[function(_dereq_,module,exports){
+var type = _dereq_( "type-component" ),
+  has = Object.prototype.hasOwnProperty;
+
+function hasKey( object, keys, keyType ) {
+
+  object = type( object ) === "object" ? object : {}, keys = type( keys ) === "array" ? keys : [];
+  keyType = type( keyType ) === "string" ? keyType : "";
+
+  var key = keys.length > 0 ? keys.shift() : "",
+    keyExists = has.call( object, key ) || object[ key ] !== void 0,
+    keyValue = keyExists ? object[ key ] : undefined,
+    keyTypeIsCorrect = type( keyValue ) === keyType;
+
+  if ( keys.length > 0 && keyExists ) {
+    return hasKey( object[ key ], keys, keyType );
+  }
+
+  return keys.length > 0 || keyType === "" ? keyExists : keyExists && keyTypeIsCorrect;
+
+}
+
+module.exports = function ( object, keys, keyType ) {
+
+  keys = type( keys ) === "string" ? keys.split( "." ) : [];
+
+  return hasKey( object, keys, keyType );
+
+};
+},{"type-component":8}],8:[function(_dereq_,module,exports){
+
+/**
+ * toString ref.
+ */
+
+var toString = Object.prototype.toString;
+
+/**
+ * Return the type of `val`.
+ *
+ * @param {Mixed} val
+ * @return {String}
+ * @api public
+ */
+
+module.exports = function(val){
+  switch (toString.call(val)) {
+    case '[object Function]': return 'function';
+    case '[object Date]': return 'date';
+    case '[object RegExp]': return 'regexp';
+    case '[object Arguments]': return 'arguments';
+    case '[object Array]': return 'array';
+  }
+
+  if (val === null) return 'null';
+  if (val === undefined) return 'undefined';
+  if (val === Object(val)) return 'object';
+
+  return typeof val;
+};
+
+},{}],9:[function(_dereq_,module,exports){
+var type = _dereq_( "type-component" );
+
+var merge = function () {
+
+  var args = Array.prototype.slice.call( arguments ),
+    deep = type( args[ 0 ] ) === "boolean" ? args.shift() : false,
+    objects = args,
+    result = {};
+
+  objects.forEach( function ( objectn ) {
+
+    if ( type( objectn ) !== "object" ) {
+      return;
+    }
+
+    Object.keys( objectn ).forEach( function ( key ) {
+      if ( Object.prototype.hasOwnProperty.call( objectn, key ) ) {
+        if ( deep && type( objectn[ key ] ) === "object" ) {
+          result[ key ] = merge( deep, {}, result[ key ], objectn[ key ] );
+        } else {
+          result[ key ] = objectn[ key ];
+        }
+      }
+    } );
+
+  } );
+
+  return result;
+};
+
+module.exports = merge;
+},{"type-component":10}],10:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],11:[function(_dereq_,module,exports){
+function omit( object, omittedKeys ) {
+  var parsedObject = {};
+
+  if ( object !== Object( object ) ) {
+    return parsedObject;
+  }
+
+  omittedKeys = Array.isArray( omittedKeys ) ? omittedKeys : [];
+
+  Object.keys( object ).forEach( function ( key ) {
+    var keyOk = true;
+
+    omittedKeys.forEach( function ( omittedKey ) {
+
+      if ( keyOk === true && key === omittedKey ) {
+        keyOk = false;
+      }
+
+    } );
+
+    if ( keyOk === true ) {
+      parsedObject[ key ] = object[ key ];
+    }
+
+  } );
+
+  return parsedObject;
+}
+
+module.exports = omit;
+},{}],12:[function(_dereq_,module,exports){
 var type = _dereq_( "./ises/type" ),
   is = {
     a: {},
@@ -2187,7 +2417,7 @@ Object.keys( ises ).forEach( function ( key ) {
 } );
 
 module.exports = is;
-},{"./ises/empty":6,"./ises/nullorundefined":7,"./ises/type":8}],6:[function(_dereq_,module,exports){
+},{"./ises/empty":13,"./ises/nullorundefined":14,"./ises/type":15}],13:[function(_dereq_,module,exports){
 var type = _dereq_("../type");
 
 module.exports = function ( value ) {
@@ -2208,11 +2438,11 @@ module.exports = function ( value ) {
   return empty;
 
 };
-},{"../type":9}],7:[function(_dereq_,module,exports){
+},{"../type":16}],14:[function(_dereq_,module,exports){
 module.exports = function ( value ) {
 	return value === null || value === undefined || value === void 0;
 };
-},{}],8:[function(_dereq_,module,exports){
+},{}],15:[function(_dereq_,module,exports){
 var type = _dereq_( "../type" );
 
 module.exports = function ( _type ) {
@@ -2220,7 +2450,7 @@ module.exports = function ( _type ) {
     return type( _value ) === _type;
   }
 }
-},{"../type":9}],9:[function(_dereq_,module,exports){
+},{"../type":16}],16:[function(_dereq_,module,exports){
 var toString = Object.prototype.toString;
 
 module.exports = function ( val ) {
@@ -2243,7 +2473,7 @@ module.exports = function ( val ) {
 
   return typeof val;
 };
-},{}],10:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   merge = _dereq_( "sc-merge" );
 
@@ -2282,71 +2512,11 @@ var optionify = function ( value, options ) {
 };
 
 module.exports = optionify;
-},{"sc-merge":11,"type-component":12}],11:[function(_dereq_,module,exports){
-var type = _dereq_( "type-component" );
-
-var merge = function () {
-
-  var args = Array.prototype.slice.call( arguments ),
-    deep = type( args[ 0 ] ) === "boolean" ? args.shift() : false,
-    objects = args,
-    result = {};
-
-  objects.forEach( function ( objectn ) {
-
-    if ( type( objectn ) !== "object" ) {
-      return;
-    }
-
-    Object.keys( objectn ).forEach( function ( key ) {
-      if ( Object.prototype.hasOwnProperty.call( objectn, key ) ) {
-        if ( deep && type( objectn[ key ] ) === "object" ) {
-          result[ key ] = merge( deep, {}, result[ key ], objectn[ key ] );
-        } else {
-          result[ key ] = objectn[ key ];
-        }
-      }
-    } );
-
-  } );
-
-  return result;
-};
-
-module.exports = merge;
-},{"type-component":12}],12:[function(_dereq_,module,exports){
-
-/**
- * toString ref.
- */
-
-var toString = Object.prototype.toString;
-
-/**
- * Return the type of `val`.
- *
- * @param {Mixed} val
- * @return {String}
- * @api public
- */
-
-module.exports = function(val){
-  switch (toString.call(val)) {
-    case '[object Function]': return 'function';
-    case '[object Date]': return 'date';
-    case '[object RegExp]': return 'regexp';
-    case '[object Arguments]': return 'arguments';
-    case '[object Array]': return 'array';
-  }
-
-  if (val === null) return 'null';
-  if (val === undefined) return 'undefined';
-  if (val === Object(val)) return 'object';
-
-  return typeof val;
-};
-
-},{}],13:[function(_dereq_,module,exports){
+},{"sc-merge":18,"type-component":19}],18:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{"type-component":19}],19:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],20:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2358,7 +2528,7 @@ module.exports={
     "malformedServerResponse": "Malformed server response. Expected a JSON object but got plain text"
   }
 }
-},{}],14:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2436,7 +2606,7 @@ exports = module.exports = function ( obj, options ) {
 };
 
 exports.use = Request.use;
-},{"./config.json":13,"q":4,"sc-guid":15,"sc-haskey":16,"sc-is":5,"sc-merge":18,"sc-queue":20,"sc-useify":25,"superagent":21}],15:[function(_dereq_,module,exports){
+},{"./config.json":20,"q":4,"sc-guid":22,"sc-haskey":23,"sc-is":12,"sc-merge":25,"sc-queue":27,"sc-useify":32,"superagent":28}],22:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
 exports.generate = function () {
@@ -2459,7 +2629,7 @@ exports.isValid = function ( guid ) {
   var rx = new RegExp( guidRx );
   return rx.test( guid );
 };
-},{}],16:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   has = Object.prototype.hasOwnProperty;
 
@@ -2488,13 +2658,13 @@ module.exports = function ( object, keys, keyType ) {
   return hasKey( object, keys, keyType );
 
 };
-},{"type-component":17}],17:[function(_dereq_,module,exports){
-module.exports=_dereq_(12)
-},{}],18:[function(_dereq_,module,exports){
-module.exports=_dereq_(11)
-},{"type-component":19}],19:[function(_dereq_,module,exports){
-module.exports=_dereq_(12)
-},{}],20:[function(_dereq_,module,exports){
+},{"type-component":24}],24:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],25:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{"type-component":26}],26:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],27:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -2571,7 +2741,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":5}],21:[function(_dereq_,module,exports){
+},{"sc-is":12}],28:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -3567,7 +3737,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":22,"reduce":23}],22:[function(_dereq_,module,exports){
+},{"emitter":29,"reduce":30}],29:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -3725,7 +3895,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],23:[function(_dereq_,module,exports){
+},{}],30:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -3750,13 +3920,13 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],24:[function(_dereq_,module,exports){
+},{}],31:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"middlewareKey": "all"
 	}
 }
-},{}],25:[function(_dereq_,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   config = _dereq_( "./config.json" ),
   noop = function () {};
@@ -3865,13 +4035,13 @@ module.exports = function ( _objectOrFunction ) {
   }
 
 };
-},{"./config.json":24,"sc-is":5}],26:[function(_dereq_,module,exports){
+},{"./config.json":31,"sc-is":12}],33:[function(_dereq_,module,exports){
 module.exports = {
   optionify: _dereq_( "sc-optionify" ),
   request: _dereq_( "sc-request" ),
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":5,"sc-optionify":10,"sc-request":14,"sc-useify":25}]},{},[2])
+},{"sc-is":12,"sc-optionify":17,"sc-request":21,"sc-useify":32}]},{},[2])
 (2)
 });

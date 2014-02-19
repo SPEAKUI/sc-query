@@ -1,5 +1,6 @@
 var q = require( "q" ),
   config = require( "./config.json" ),
+  extendify = require( "sc-extendify" ),
   utils = require( "./utils" );
 
 /**
@@ -10,27 +11,80 @@ var q = require( "q" ),
  * @param {String} url End point url
  * @param {String} type HTTP method
  */
-var Query = function ( url, type, options ) {
-  var self = this;
+var Query = extendify( {
 
-  self.url = url;
-  self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
-  self.options = utils.is.object( options ) ? options : {};
-  self.parameters = {};
+  init: function ( url, type, options ) {
+    var self = this;
 
-};
+    self.url = url;
+    self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
+    self.options = utils.is.object( options ) ? options : {};
+    self.parameters = {};
 
-Query.prototype.parameter = function ( key, value ) {
-  var self = this;
+  },
 
-  if ( utils.is.empty( value ) ) {
-    return self.parameters[ key ];
+  parameter: function ( key, value ) {
+    var self = this;
+
+    if ( utils.is.empty( value ) ) {
+      return self.parameters[ key ];
+    }
+
+    self.parameters[ key ] = value;
+
+    return self;
+  },
+
+  execute: function () {
+    var self = this,
+      preRequestDeferred = q.defer(),
+      requestData,
+      defer = q.defer();
+
+    requestData = {
+      type: self.type,
+      url: self.url,
+      data: self.parameters
+    };
+
+    self.middleware( "preRequest", function ( error, middlewareResponse ) {
+
+      middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+      error = error instanceof Error ? error : null;
+
+      if ( error ) {
+        defer.reject( error );
+      } else {
+        preRequestDeferred.resolve( middlewareResponse );
+      }
+
+    }, requestData );
+
+    preRequestDeferred.promise.then( function ( preRequestResponse ) {
+
+      utils.request( preRequestResponse ).then( function ( postRequestResponse ) {
+
+        self.middleware( "postRequest", function ( error, middlewareResponse ) {
+
+          middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
+          error = error instanceof Error ? error : null;
+
+          if ( error ) {
+            defer.reject( error );
+          } else {
+            defer.resolve( middlewareResponse );
+          }
+
+        }, postRequestResponse );
+
+      } ).fail( defer.reject );
+
+    } ).fail( defer.reject );
+
+    return defer.promise;
   }
 
-  self.parameters[ key ] = value;
-
-  return self;
-};
+} );
 
 /**
  * specifying some predicate for filtering a request
@@ -92,57 +146,10 @@ Query.prototype.parameter = function ( key, value ) {
  }
  a Deferred Object
  */
-Query.prototype.execute = function () {
-  var self = this,
-    preRequestDeferred = q.defer(),
-    requestData,
-    defer = q.defer();
-
-  requestData = {
-    type: self.type,
-    url: self.url,
-    data: self.parameters
-  };
-
-  self.middleware( "preRequest", function ( error, middlewareResponse ) {
-
-    middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
-    error = error instanceof Error ? error : null;
-
-    if ( error ) {
-      defer.reject( error );
-    } else {
-      preRequestDeferred.resolve( middlewareResponse );
-    }
-
-  }, requestData );
-
-  preRequestDeferred.promise.then( function ( preRequestResponse ) {
-
-    utils.request( preRequestResponse ).then( function ( postRequestResponse ) {
-
-      self.middleware( "postRequest", function ( error, middlewareResponse ) {
-
-        middlewareResponse = error && !( error instanceof Error ) ? error : middlewareResponse;
-        error = error instanceof Error ? error : null;
-
-        if ( error ) {
-          defer.reject( error );
-        } else {
-          defer.resolve( middlewareResponse );
-        }
-
-      }, postRequestResponse );
-
-    } ).fail( defer.reject );
-
-  } ).fail( defer.reject );
-
-  return defer.promise;
-};
 
 utils.optionify( Query );
 utils.useify( Query );
 
 exports = module.exports = Query;
 exports.utils = utils;
+exports.config = config;
