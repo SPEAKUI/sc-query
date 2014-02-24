@@ -14,9 +14,9 @@ describe( "Query", function () {
 
     query.parameter( "color", "red" ).parameter( "chicken", "tasty" );
 
-    query.parameters.color.should.equal( query.parameter( "color" ) );
-    query.parameters.chicken.should.equal( query.parameter( "chicken" ) );
-    Object.keys( query.parameters ).should.have.a.lengthOf( 2 );
+    query.__parameters.color.should.equal( query.parameter( "color" ) );
+    query.__parameters.chicken.should.equal( query.parameter( "chicken" ) );
+    Object.keys( query.__parameters ).should.have.a.lengthOf( 2 );
 
   } );
 

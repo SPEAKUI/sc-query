@@ -17,9 +17,9 @@ describe( "sc-query", function () {
   it( "A query module", function ( _done ) {
     var personQuery = new Query( "/person", "get" );
 
-    personQuery.param( "name", "david" ).execute().then( function ( david ) {
+    personQuery.param( "name", "Kelsey Mayer" ).execute().then( function ( kelsey ) {
 
-      david.name.should.equal( "david" );
+      kelsey.name.should.equal( "Kelsey Mayer" );
       _done();
 
     } );

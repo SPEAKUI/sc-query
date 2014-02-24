@@ -8,6 +8,10 @@
     "posttest": "./node_modules/.bin/forever stop server.js",
     "test": "./node_modules/.bin/mocha-phantomjs -p ./node_modules/.bin/phantomjs -s localToRemoteUrlAccessEnabled=true -s webSecurityEnabled=false test/client/index.test.html; ./node_modules/.bin/mocha test/*.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SPEAKUI/sc-query"
+  },
   "author": "David Tsuji",
   "license": "MIT",
   "devDependencies": {
@@ -20,7 +24,8 @@
     "mocha-phantomjs": "~3.3.1",
     "browserify": "~3.28.1",
     "phantomjs": "~1.9.7-1",
-    "underscore": "~1.6.0"
+    "underscore": "~1.6.0",
+    "sc-pick": "0.0.x"
   },
   "dependencies": {
     "q": "~1.0.0",
@@ -28,6 +33,7 @@
     "sc-request": "0.0.x",
     "sc-is": "0.0.x",
     "sc-useify": "0.0.x",
-    "sc-extendify": "0.0.x"
+    "sc-extendify": "0.0.x",
+    "sc-merge": "0.0.x"
   }
 }
