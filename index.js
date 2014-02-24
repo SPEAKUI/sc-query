@@ -24,10 +24,12 @@ var Query = extendify( {
   },
 
   parameters: function ( data ) {
+    var self = this;
     if ( utils.is.an.object( data ) ) {
-      this.__parameters = utils.merge( this.__parameters, data );
+      self.__parameters = utils.merge( self.__parameters, data );
+      return self;
     }
-    return this.__parameters;
+    return self.__parameters;
   },
 
   parameter: function ( key, value ) {
