@@ -88,67 +88,6 @@ var Query = extendify( {
 
 Query.prototype.param = Query.prototype.parameter;
 
-/**
- * specifying some predicate for filtering a request
- *
- * @method where
- * @param {String} the property you want to filter
- * @param {String} the predicate you want to assign to the filtering
- * @param {Object} the value of the predicate
- * @returns {Query} a Query Object
- */
-// Query.prototype.where = function ( attribute, operation, value ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to return
- *
- * @method take
- * @param {Number} the number of Entities you want to be retuned by the server
- * @returns {Query} a Query Object
- */
-// Query.prototype.take = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to skip from the list
- *
- * @method skip
- * @param {Number} the number of Entities you want to skip
- * @returns {Query} a Query Object
- */
-// Query.prototype.skip = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * Setup a query to use orderBy filter
- *
- * @method orderBy
- * @param {String} the attribute you want to use for the sorting
- * @param {String} the direction of the sorting ("asc" or "dsc")
- * @returns {Query} a Query Object
- */
-// Query.prototype.orderBy = function ( attribute, direction ) {
-
-//   return this;
-// };
-
-/**
- * Execute the query and return a deferred Object
- *
- * @method execute
- * @returns {
-   Deferred
- }
- a Deferred Object
- */
-
 utils.optionify( Query );
 utils.useify( Query );
 
