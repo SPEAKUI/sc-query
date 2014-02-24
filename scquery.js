@@ -25,19 +25,26 @@ var Query = extendify( {
 
     self.url = url;
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
-    self.options = utils.is.object( options ) ? options : {};
-    self.parameters = self.parameters = {};
+    self.options = utils.is.an.object( options ) ? options : {};
+    self.__parameters = {};
 
+  },
+
+  parameters: function ( data ) {
+    if ( utils.is.an.object( data ) ) {
+      this.__parameters = utils.merge( this.__parameters, data );
+    }
+    return this.__parameters;
   },
 
   parameter: function ( key, value ) {
     var self = this;
 
-    if ( self.parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
-      return self.parameters[ key ];
+    if ( self.__parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__parameters[ key ];
     }
 
-    self.parameters[ key ] = value;
+    self.__parameters[ key ] = value;
 
     return self;
   },
@@ -51,7 +58,7 @@ var Query = extendify( {
     requestData = {
       type: self.type,
       url: self.url,
-      data: self.parameters
+      data: self.__parameters
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
@@ -95,74 +102,13 @@ var Query = extendify( {
 
 Query.prototype.param = Query.prototype.parameter;
 
-/**
- * specifying some predicate for filtering a request
- *
- * @method where
- * @param {String} the property you want to filter
- * @param {String} the predicate you want to assign to the filtering
- * @param {Object} the value of the predicate
- * @returns {Query} a Query Object
- */
-// Query.prototype.where = function ( attribute, operation, value ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to return
- *
- * @method take
- * @param {Number} the number of Entities you want to be retuned by the server
- * @returns {Query} a Query Object
- */
-// Query.prototype.take = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to skip from the list
- *
- * @method skip
- * @param {Number} the number of Entities you want to skip
- * @returns {Query} a Query Object
- */
-// Query.prototype.skip = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * Setup a query to use orderBy filter
- *
- * @method orderBy
- * @param {String} the attribute you want to use for the sorting
- * @param {String} the direction of the sorting ("asc" or "dsc")
- * @returns {Query} a Query Object
- */
-// Query.prototype.orderBy = function ( attribute, direction ) {
-
-//   return this;
-// };
-
-/**
- * Execute the query and return a deferred Object
- *
- * @method execute
- * @returns {
-   Deferred
- }
- a Deferred Object
- */
-
 utils.optionify( Query );
 utils.useify( Query );
 
 exports = module.exports = Query;
 exports.utils = utils;
 exports.config = config;
-},{"./config.json":1,"./utils":33,"q":4,"sc-extendify":6}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./utils":35,"q":4,"sc-extendify":6}],3:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2478,6 +2424,10 @@ module.exports = function ( val ) {
   return typeof val;
 };
 },{}],17:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{"type-component":18}],18:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],19:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   merge = _dereq_( "sc-merge" );
 
@@ -2516,11 +2466,11 @@ var optionify = function ( value, options ) {
 };
 
 module.exports = optionify;
-},{"sc-merge":18,"type-component":19}],18:[function(_dereq_,module,exports){
+},{"sc-merge":20,"type-component":21}],20:[function(_dereq_,module,exports){
 module.exports=_dereq_(9)
-},{"type-component":19}],19:[function(_dereq_,module,exports){
+},{"type-component":21}],21:[function(_dereq_,module,exports){
 module.exports=_dereq_(8)
-},{}],20:[function(_dereq_,module,exports){
+},{}],22:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2532,7 +2482,7 @@ module.exports={
     }
   }
 }
-},{}],21:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2611,7 +2561,7 @@ exports = module.exports = function ( obj, options ) {
 
 exports.use = Request.use;
 exports.useify = Request.useify;
-},{"./config.json":20,"q":4,"sc-guid":22,"sc-haskey":23,"sc-is":12,"sc-merge":25,"sc-queue":27,"sc-useify":32,"superagent":28}],22:[function(_dereq_,module,exports){
+},{"./config.json":22,"q":4,"sc-guid":24,"sc-haskey":25,"sc-is":12,"sc-merge":27,"sc-queue":29,"sc-useify":34,"superagent":30}],24:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
 exports.generate = function () {
@@ -2634,15 +2584,15 @@ exports.isValid = function ( guid ) {
   var rx = new RegExp( guidRx );
   return rx.test( guid );
 };
-},{}],23:[function(_dereq_,module,exports){
-module.exports=_dereq_(7)
-},{"type-component":24}],24:[function(_dereq_,module,exports){
-module.exports=_dereq_(8)
 },{}],25:[function(_dereq_,module,exports){
-module.exports=_dereq_(9)
+module.exports=_dereq_(7)
 },{"type-component":26}],26:[function(_dereq_,module,exports){
 module.exports=_dereq_(8)
 },{}],27:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{"type-component":28}],28:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],29:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -2719,7 +2669,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":12}],28:[function(_dereq_,module,exports){
+},{"sc-is":12}],30:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -3715,7 +3665,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":29,"reduce":30}],29:[function(_dereq_,module,exports){
+},{"emitter":31,"reduce":32}],31:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -3873,7 +3823,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],30:[function(_dereq_,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -3898,13 +3848,13 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],31:[function(_dereq_,module,exports){
+},{}],33:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"middlewareKey": "all"
 	}
 }
-},{}],32:[function(_dereq_,module,exports){
+},{}],34:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   config = _dereq_( "./config.json" ),
   noop = function () {};
@@ -4013,13 +3963,14 @@ module.exports = function ( _objectOrFunction ) {
   }
 
 };
-},{"./config.json":31,"sc-is":12}],33:[function(_dereq_,module,exports){
+},{"./config.json":33,"sc-is":12}],35:[function(_dereq_,module,exports){
 module.exports = {
+  merge: _dereq_( "sc-merge" ),
   optionify: _dereq_( "sc-optionify" ),
   request: _dereq_( "sc-request" ),
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":12,"sc-optionify":17,"sc-request":21,"sc-useify":32}]},{},[2])
+},{"sc-is":12,"sc-merge":17,"sc-optionify":19,"sc-request":23,"sc-useify":34}]},{},[2])
 (2)
 });
