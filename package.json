@@ -1,6 +1,6 @@
 {
   "name": "sc-query",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A query module for datajs",
   "main": "index.js",
   "scripts": {
