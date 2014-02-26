@@ -95,6 +95,5 @@ describe( "Query", function () {
 
   } );
 
-  // TODO: more tests!
 
 } );

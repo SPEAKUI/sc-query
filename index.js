@@ -3,14 +3,6 @@ var q = require( "q" ),
   extendify = require( "sc-extendify" ),
   utils = require( "./utils" );
 
-/**
- * Query object used to construct a proper query in a fluent way
- *
- * @class  Query
- * @constructor
- * @param {String} url End point url
- * @param {String} type HTTP method
- */
 var Query = extendify( {
 
   init: function ( url, type, options ) {
