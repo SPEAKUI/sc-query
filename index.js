@@ -12,6 +12,7 @@ var Query = extendify( {
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
     self.options = utils.is.an.object( options ) ? options : {};
     self.__parameters = {};
+    self.__queries = {};
 
   },
 
@@ -36,6 +37,27 @@ var Query = extendify( {
     return self;
   },
 
+  queries: function ( data ) {
+    var self = this;
+    if ( utils.is.an.object( data ) ) {
+      self.__queries = utils.merge( self.__queries, data );
+      return self;
+    }
+    return self.__queries;
+  },
+
+  query: function ( key, value ) {
+    var self = this;
+
+    if ( self.__queries.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__queries[ key ];
+    }
+
+    self.__queries[ key ] = value;
+
+    return self;
+  },
+
   execute: function () {
     var self = this,
       preRequestDeferred = q.defer(),
@@ -45,7 +67,8 @@ var Query = extendify( {
     requestData = {
       type: self.type,
       url: self.url,
-      data: self.__parameters
+      data: self.__parameters,
+      query: self.__queries
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
