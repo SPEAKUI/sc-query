@@ -12,6 +12,7 @@ app.post( "/api/food", function ( req, res ) {
 } );
 
 app.post( "/api/mixed-body-querystring-data", function ( req, res ) {
+  console.log(req.headers);
   res.json( {
     body: req.body,
     query: {

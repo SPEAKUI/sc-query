@@ -124,4 +124,32 @@ describe( "Query", function () {
 
   } );
 
+  it( "should be able to add body data, query and header parameters", function ( done ) {
+    var personQuery = new Query( "http://localhost:3000/api/mixed-body-querystring-data", "post" );
+
+    personQuery.parameters( {
+      "name": "david",
+      "age": 30
+    } );
+
+    personQuery.query( "database", "master" );
+    personQuery.query( "language", "en" );
+    personQuery.header("x-sent-with", "mocha");
+
+    personQuery.execute().then( function ( res ) {
+
+      Object.keys( res.body ).length.should.eql( 2 );
+      Object.keys( res.query ).length.should.eql( 2 );
+
+      res.body.name.should.eql( "david" );
+      res.body.age.should.eql( 30 );
+      res.query.database.should.eql( "master" );
+      res.query.language.should.eql( "en" );
+
+      done();
+
+    } ).fail( done );
+
+  } );
+
 } );

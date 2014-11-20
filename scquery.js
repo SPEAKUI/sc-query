@@ -63,7 +63,7 @@ var Query = extendify( {
 
     self.__parameters = {};
     self.__queries = {};
-
+    self.__headers = {};
   },
 
   /**
@@ -143,6 +143,27 @@ var Query = extendify( {
   },
 
   /**
+   * Gets or sets a header by a key/value pair. A header is the key/value pair which is added to the headers of the request.
+   *
+   * @method header
+   * @chainable
+   * @param  {String} key   The header key
+   * @param  {String} value The header value
+   * @return {Mixed} If `key` and `value` was given `self` is returned, if only `key` was given, the value of that key is returned.
+   */
+  header: function ( key, value ) {
+    var self = this;
+
+    if ( self.__headers.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__headers[ key ];
+    }
+
+    self.__headers[ key ] = value;
+
+    return self;
+  },
+
+  /**
    * Executes the query by triggering the XHR request to the given url (end point).
    *
    * @method execute
@@ -158,7 +179,8 @@ var Query = extendify( {
       type: self.type,
       url: self.url,
       data: self.__parameters,
-      query: self.__queries
+      query: self.__queries,
+      header: self.__headers
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
@@ -242,7 +264,7 @@ exports.utils = utils;
  */
 exports.config = config;
 
-},{"./config.json":1,"./utils":29,"q":4,"sc-extendify":6}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./utils":42,"q":4,"sc-extendify":6}],3:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -625,22 +647,6 @@ if (typeof ReturnValue !== "undefined") {
     };
 }
 
-// Until V8 3.19 / Chromium 29 is released, SpiderMonkey is the only
-// engine that has a deployed base of browsers that support generators.
-// However, SM's generators use the Python-inspired semantics of
-// outdated ES6 drafts.  We would like to support ES6, but we'd also
-// like to make it possible to use generators in deployed browsers, so
-// we also support Python-style generators.  At some point we can remove
-// this block.
-var hasES6Generators;
-try {
-    /* jshint evil: true, nonew: false */
-    new Function("(function* (){ yield 1; })");
-    hasES6Generators = true;
-} catch (e) {
-    hasES6Generators = false;
-}
-
 // long stack traces
 
 var STACK_JUMP_SEPARATOR = "From previous event:";
@@ -941,6 +947,7 @@ defer.prototype.makeNodeResolver = function () {
  * @returns a promise that may be resolved with the given resolve and reject
  * functions, or rejected by a thrown exception in resolver
  */
+Q.Promise = promise; // ES6
 Q.promise = promise;
 function promise(resolver) {
     if (typeof resolver !== "function") {
@@ -954,6 +961,11 @@ function promise(resolver) {
     }
     return deferred.promise;
 }
+
+promise.race = race; // ES6
+promise.all = all; // ES6
+promise.reject = reject; // ES6
+promise.resolve = Q; // ES6
 
 // XXX experimental.  This method is a way to denote that a local value is
 // serializable and should be immediately dispatched to a remote upon request,
@@ -1279,42 +1291,14 @@ Promise.prototype.isRejected = function () {
 // shimmed environments, this would naturally be a `Set`.
 var unhandledReasons = [];
 var unhandledRejections = [];
-var unhandledReasonsDisplayed = false;
 var trackUnhandledRejections = true;
-function displayUnhandledReasons() {
-    if (
-        !unhandledReasonsDisplayed &&
-        typeof window !== "undefined" &&
-        window.console
-    ) {
-        console.warn("[Q] Unhandled rejection reasons (should be empty):",
-                     unhandledReasons);
-    }
-
-    unhandledReasonsDisplayed = true;
-}
-
-function logUnhandledReasons() {
-    for (var i = 0; i < unhandledReasons.length; i++) {
-        var reason = unhandledReasons[i];
-        console.warn("Unhandled rejection reason:", reason);
-    }
-}
 
 function resetUnhandledRejections() {
     unhandledReasons.length = 0;
     unhandledRejections.length = 0;
-    unhandledReasonsDisplayed = false;
 
     if (!trackUnhandledRejections) {
         trackUnhandledRejections = true;
-
-        // Show unhandled rejection reasons if Node exits without handling an
-        // outstanding rejection.  (Note that Browserify presently produces a
-        // `process` global without the `EventEmitter` `on` method.)
-        if (typeof process !== "undefined" && process.on) {
-            process.on("exit", logUnhandledReasons);
-        }
     }
 }
 
@@ -1329,7 +1313,6 @@ function trackRejection(promise, reason) {
     } else {
         unhandledReasons.push("(no stack) " + reason);
     }
-    displayUnhandledReasons();
 }
 
 function untrackRejection(promise) {
@@ -1353,9 +1336,6 @@ Q.getUnhandledReasons = function () {
 
 Q.stopUnhandledRejectionTracking = function () {
     resetUnhandledRejections();
-    if (typeof process !== "undefined" && process.on) {
-        process.removeListener("exit", logUnhandledReasons);
-    }
     trackUnhandledRejections = false;
 };
 
@@ -1519,7 +1499,17 @@ function async(makeGenerator) {
         // when verb is "throw", arg is an exception
         function continuer(verb, arg) {
             var result;
-            if (hasES6Generators) {
+
+            // Until V8 3.19 / Chromium 29 is released, SpiderMonkey is the only
+            // engine that has a deployed base of browsers that support generators.
+            // However, SM's generators use the Python-inspired semantics of
+            // outdated ES6 drafts.  We would like to support ES6, but we'd also
+            // like to make it possible to use generators in deployed browsers, so
+            // we also support Python-style generators.  At some point we can remove
+            // this block.
+
+            if (typeof StopIteration === "undefined") {
+                // ES6 Generators
                 try {
                     result = generator[verb](arg);
                 } catch (exception) {
@@ -1531,6 +1521,7 @@ function async(makeGenerator) {
                     return when(result.value, callback, errback);
                 }
             } else {
+                // SpiderMonkey Generators
                 // FIXME: Remove this case when SM does ES6 generators.
                 try {
                     result = generator[verb](arg);
@@ -2235,8 +2226,8 @@ return Q;
 
 });
 
-}).call(this,_dereq_("/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/dts/Sites/SitecoreSPEAK/utils/sc-query/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":3}],5:[function(_dereq_,module,exports){
+}).call(this,_dereq_("E:\\asimov\\master\\sc-query\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"))
+},{"E:\\asimov\\master\\sc-query\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":3}],5:[function(_dereq_,module,exports){
 var extend = function ( object ) {
 
 	/**
@@ -2333,7 +2324,7 @@ var extendify = function ( fn ) {
 };
 
 module.exports = extendify;
-},{"./extend.johnresig.js":5,"sc-haskey":7,"sc-merge":15,"sc-omit":9}],7:[function(_dereq_,module,exports){
+},{"./extend.johnresig.js":5,"sc-haskey":7,"sc-merge":17,"sc-omit":9}],7:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   has = Object.prototype.hasOwnProperty;
 
@@ -2449,7 +2440,8 @@ var ises = {
   "string": [ "string", type( "string" ) ],
   "undefined": [ "undefined", type( "undefined" ) ],
   "empty": [ "empty", _dereq_( "./ises/empty" ) ],
-  "nullorundefined": [ "nullOrUndefined", "nullorundefined", _dereq_( "./ises/nullorundefined" ) ]
+  "nullorundefined": [ "nullOrUndefined", "nullorundefined", _dereq_( "./ises/nullorundefined" ) ],
+  "guid": [ "guid", _dereq_( "./ises/guid" ) ]
 }
 
 Object.keys( ises ).forEach( function ( key ) {
@@ -2466,8 +2458,9 @@ Object.keys( ises ).forEach( function ( key ) {
 
 } );
 
-module.exports = is;
-},{"./ises/empty":11,"./ises/nullorundefined":12,"./ises/type":13}],11:[function(_dereq_,module,exports){
+exports = module.exports = is;
+exports.type = type;
+},{"./ises/empty":11,"./ises/guid":12,"./ises/nullorundefined":13,"./ises/type":14}],11:[function(_dereq_,module,exports){
 var type = _dereq_("../type");
 
 module.exports = function ( value ) {
@@ -2488,11 +2481,17 @@ module.exports = function ( value ) {
   return empty;
 
 };
-},{"../type":14}],12:[function(_dereq_,module,exports){
+},{"../type":16}],12:[function(_dereq_,module,exports){
+var guid = _dereq_( "sc-guid" );
+
+module.exports = function ( value ) {
+  return guid.isValid( value );
+};
+},{"sc-guid":15}],13:[function(_dereq_,module,exports){
 module.exports = function ( value ) {
 	return value === null || value === undefined || value === void 0;
 };
-},{}],13:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 var type = _dereq_( "../type" );
 
 module.exports = function ( _type ) {
@@ -2500,7 +2499,30 @@ module.exports = function ( _type ) {
     return type( _value ) === _type;
   }
 }
-},{"../type":14}],14:[function(_dereq_,module,exports){
+},{"../type":16}],15:[function(_dereq_,module,exports){
+var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
+
+exports.generate = function () {
+  var d = new Date().getTime();
+  var guid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace( /[xy]/g, function ( c ) {
+    var r = ( d + Math.random() * 16 ) % 16 | 0;
+    d = Math.floor( d / 16 );
+    return ( c === "x" ? r : ( r & 0x7 | 0x8 ) ).toString( 16 );
+  } );
+  return guid;
+};
+
+exports.match = function ( string ) {
+  var rx = new RegExp( guidRx, "g" ),
+    matches = ( typeof string === "string" ? string : "" ).match( rx );
+  return Array.isArray( matches ) ? matches : [];
+};
+
+exports.isValid = function ( guid ) {
+  var rx = new RegExp( guidRx );
+  return rx.test( guid );
+};
+},{}],16:[function(_dereq_,module,exports){
 var toString = Object.prototype.toString;
 
 module.exports = function ( val ) {
@@ -2523,7 +2545,7 @@ module.exports = function ( val ) {
 
   return typeof val;
 };
-},{}],15:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" );
 
 var merge = function () {
@@ -2555,9 +2577,9 @@ var merge = function () {
 };
 
 module.exports = merge;
-},{"type-component":16}],16:[function(_dereq_,module,exports){
+},{"type-component":18}],18:[function(_dereq_,module,exports){
 module.exports=_dereq_(8)
-},{}],17:[function(_dereq_,module,exports){
+},{}],19:[function(_dereq_,module,exports){
 var merge = _dereq_( "sc-merge" );
 
 var optionify = function ( value, options ) {
@@ -2605,7 +2627,7 @@ var optionify = function ( value, options ) {
 };
 
 module.exports = optionify;
-},{"sc-merge":15}],18:[function(_dereq_,module,exports){
+},{"sc-merge":17}],20:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2617,7 +2639,7 @@ module.exports={
     }
   }
 }
-},{}],19:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2638,6 +2660,7 @@ var Request = function ( options ) {
 
     superagent( task.data.type, task.data.url )[ /get/i.test( task.data.type ) ? "query" : "send" ]( task.data.data )
       .query( task.data.query )
+      .set( task.data.header || {} )
       .accept( "json" )
       .type( "json" )
       .end( function ( error, response ) {
@@ -2699,34 +2722,31 @@ exports = module.exports = function ( obj, options ) {
 
 exports.use = Request.use;
 exports.useify = Request.useify;
-},{"./config.json":18,"q":4,"sc-guid":20,"sc-haskey":21,"sc-is":10,"sc-merge":15,"sc-queue":23,"sc-useify":28,"superagent":24}],20:[function(_dereq_,module,exports){
-var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
-
-exports.generate = function () {
-  var d = new Date().getTime();
-  var guid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace( /[xy]/g, function ( c ) {
-    var r = ( d + Math.random() * 16 ) % 16 | 0;
-    d = Math.floor( d / 16 );
-    return ( c === "x" ? r : ( r & 0x7 | 0x8 ) ).toString( 16 );
-  } );
-  return guid;
-};
-
-exports.match = function ( string ) {
-  var rx = new RegExp( guidRx, "g" ),
-    matches = ( typeof string === "string" ? string : "" ).match( rx );
-  return Array.isArray( matches ) ? matches : [];
-};
-
-exports.isValid = function ( guid ) {
-  var rx = new RegExp( guidRx );
-  return rx.test( guid );
-};
-},{}],21:[function(_dereq_,module,exports){
+},{"./config.json":20,"q":22,"sc-guid":23,"sc-haskey":24,"sc-is":26,"sc-merge":32,"sc-queue":34,"sc-useify":36,"superagent":37}],22:[function(_dereq_,module,exports){
+module.exports=_dereq_(4)
+},{"E:\\asimov\\master\\sc-query\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":3}],23:[function(_dereq_,module,exports){
+module.exports=_dereq_(15)
+},{}],24:[function(_dereq_,module,exports){
 module.exports=_dereq_(7)
-},{"type-component":22}],22:[function(_dereq_,module,exports){
+},{"type-component":25}],25:[function(_dereq_,module,exports){
 module.exports=_dereq_(8)
-},{}],23:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"./ises/empty":27,"./ises/guid":28,"./ises/nullorundefined":29,"./ises/type":30}],27:[function(_dereq_,module,exports){
+module.exports=_dereq_(11)
+},{"../type":31}],28:[function(_dereq_,module,exports){
+module.exports=_dereq_(12)
+},{"sc-guid":23}],29:[function(_dereq_,module,exports){
+module.exports=_dereq_(13)
+},{}],30:[function(_dereq_,module,exports){
+module.exports=_dereq_(14)
+},{"../type":31}],31:[function(_dereq_,module,exports){
+module.exports=_dereq_(16)
+},{}],32:[function(_dereq_,module,exports){
+module.exports=_dereq_(17)
+},{"type-component":33}],33:[function(_dereq_,module,exports){
+module.exports=_dereq_(8)
+},{}],34:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -2803,7 +2823,128 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":10}],24:[function(_dereq_,module,exports){
+},{"sc-is":26}],35:[function(_dereq_,module,exports){
+module.exports={
+	"defaults": {
+		"middlewareKey": "all"
+	}
+}
+},{}],36:[function(_dereq_,module,exports){
+var is = _dereq_( "sc-is" ),
+  config = _dereq_( "./config.json" ),
+  noop = function () {};
+
+var useifyFunction = function ( functions, key, fn ) {
+  if ( is.not.empty( key ) && is.a.string( key ) ) {
+    if ( is.not.an.array( functions[ key ] ) ) {
+      functions[ key ] = [];
+    }
+    if ( is.a.func( fn ) ) {
+      functions[ key ].push( fn );
+    }
+    return functions[ key ];
+  }
+}
+
+var Useify = function () {
+  this.functions = {
+    all: []
+  };
+};
+
+Useify.prototype.use = function () {
+  var self = this,
+    args = Array.prototype.slice.call( arguments ),
+    key = is.a.string( args[ 0 ] ) ? args.shift() : config.defaults.middlewareKey,
+    fn = is.a.func( args[ 0 ] ) ? args.shift() : noop;
+
+  useifyFunction( self.functions, key, fn );
+};
+
+Useify.prototype.middleware = function () {
+
+  var self = this,
+    currentFunction = 0,
+    args = Array.prototype.slice.call( arguments ),
+    middlewareKey = is.a.string( args[ 0 ] ) && is.a.func( args[ 1 ] ) ? args.shift() : config.defaults.middlewareKey,
+    callback = is.a.func( args[ 0 ] ) ? args.shift() : noop;
+
+  useifyFunction( self.functions, middlewareKey );
+
+  var next = function () {
+    var fn = self.functions[ middlewareKey ][ currentFunction++ ],
+      args = Array.prototype.slice.call( arguments );
+
+    if ( !fn ) {
+      callback.apply( self.context, args );
+    } else {
+      args.push( next );
+      fn.apply( self.context, args );
+    }
+
+  };
+
+  next.apply( self.context, args );
+
+};
+
+Useify.prototype.clear = function ( middlewareKey ) {
+  if ( is.a.string( middlewareKey ) && is.not.empty( middlewareKey ) ) {
+    this.functions[ middlewareKey ] = [];
+  } else {
+    this.functions = {
+      all: []
+    };
+  }
+};
+
+module.exports = function ( _objectOrFunction ) {
+
+  var useify = new Useify();
+
+  if ( is.an.object( _objectOrFunction ) ) {
+
+    Object.defineProperties( _objectOrFunction, {
+
+      "use": {
+        value: function () {
+          useify.use.apply( useify, arguments );
+          return _objectOrFunction;
+        }
+      },
+
+      "middleware": {
+        value: function () {
+          useify.middleware.apply( useify, arguments );
+        }
+      },
+
+      "useify": {
+        value: useify
+      }
+
+    } );
+
+    useify.context = _objectOrFunction;
+
+  } else if ( is.a.fn( _objectOrFunction ) ) {
+
+    _objectOrFunction.prototype.middleware = function () {
+      useify.context = this;
+      useify.middleware.apply( useify, arguments );
+    };
+
+    _objectOrFunction.use = function () {
+      useify.use.apply( useify, arguments );
+      return this;
+    };
+
+    _objectOrFunction.useify = useify;
+
+  }
+
+};
+},{"./config.json":35,"sc-is":26}],37:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -3799,7 +3940,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":25,"reduce":26}],25:[function(_dereq_,module,exports){
+},{"emitter":38,"reduce":39}],38:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -3957,7 +4098,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],26:[function(_dereq_,module,exports){
+},{}],39:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -3982,128 +4123,11 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],27:[function(_dereq_,module,exports){
-module.exports={
-	"defaults": {
-		"middlewareKey": "all"
-	}
-}
-},{}],28:[function(_dereq_,module,exports){
-var is = _dereq_( "sc-is" ),
-  config = _dereq_( "./config.json" ),
-  noop = function () {};
-
-var useifyFunction = function ( functions, key, fn ) {
-  if ( is.not.empty( key ) && is.a.string( key ) ) {
-    if ( is.not.an.array( functions[ key ] ) ) {
-      functions[ key ] = [];
-    }
-    if ( is.a.func( fn ) ) {
-      functions[ key ].push( fn );
-    }
-    return functions[ key ];
-  }
-}
-
-var Useify = function () {
-  this.functions = {
-    all: []
-  };
-};
-
-Useify.prototype.use = function () {
-  var self = this,
-    args = Array.prototype.slice.call( arguments ),
-    key = is.a.string( args[ 0 ] ) ? args.shift() : config.defaults.middlewareKey,
-    fn = is.a.func( args[ 0 ] ) ? args.shift() : noop;
-
-  useifyFunction( self.functions, key, fn );
-};
-
-Useify.prototype.middleware = function () {
-
-  var self = this,
-    currentFunction = 0,
-    args = Array.prototype.slice.call( arguments ),
-    middlewareKey = is.a.string( args[ 0 ] ) && is.a.func( args[ 1 ] ) ? args.shift() : config.defaults.middlewareKey,
-    callback = is.a.func( args[ 0 ] ) ? args.shift() : noop;
-
-  useifyFunction( self.functions, middlewareKey );
-
-  var next = function () {
-    var fn = self.functions[ middlewareKey ][ currentFunction++ ],
-      args = Array.prototype.slice.call( arguments );
-
-    if ( !fn ) {
-      callback.apply( self.context, args );
-    } else {
-      args.push( next );
-      fn.apply( self.context, args );
-    }
-
-  };
-
-  next.apply( self.context, args );
-
-};
-
-Useify.prototype.clear = function ( middlewareKey ) {
-  if ( is.a.string( middlewareKey ) && is.not.empty( middlewareKey ) ) {
-    this.functions[ middlewareKey ] = [];
-  } else {
-    this.functions = {
-      all: []
-    };
-  }
-};
-
-module.exports = function ( _objectOrFunction ) {
-
-  var useify = new Useify();
-
-  if ( is.an.object( _objectOrFunction ) ) {
-
-    Object.defineProperties( _objectOrFunction, {
-
-      "use": {
-        value: function () {
-          useify.use.apply( useify, arguments );
-          return _objectOrFunction;
-        }
-      },
-
-      "middleware": {
-        value: function () {
-          useify.middleware.apply( useify, arguments );
-        }
-      },
-
-      "useify": {
-        value: useify
-      }
-
-    } );
-
-    useify.context = _objectOrFunction;
-
-  } else if ( is.a.fn( _objectOrFunction ) ) {
-
-    _objectOrFunction.prototype.middleware = function () {
-      useify.context = this;
-      useify.middleware.apply( useify, arguments );
-    };
-
-    _objectOrFunction.use = function () {
-      useify.use.apply( useify, arguments );
-      return this;
-    };
-
-    _objectOrFunction.useify = useify;
-
-  }
-
-};
-},{"./config.json":27,"sc-is":10}],29:[function(_dereq_,module,exports){
+},{}],40:[function(_dereq_,module,exports){
+module.exports=_dereq_(35)
+},{}],41:[function(_dereq_,module,exports){
+arguments[4][36][0].apply(exports,arguments)
+},{"./config.json":40,"sc-is":10}],42:[function(_dereq_,module,exports){
 module.exports = {
   merge: _dereq_( "sc-merge" ),
   optionify: _dereq_( "sc-optionify" ),
@@ -4111,6 +4135,6 @@ module.exports = {
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":10,"sc-merge":15,"sc-optionify":17,"sc-request":19,"sc-useify":28}]},{},[2])
+},{"sc-is":10,"sc-merge":17,"sc-optionify":19,"sc-request":21,"sc-useify":41}]},{},[2])
 (2)
 });

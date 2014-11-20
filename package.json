@@ -1,6 +1,6 @@
 {
   "name": "sc-query",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "A query module for datajs",
   "main": "index.js",
   "scripts": {
@@ -30,7 +30,7 @@
   "dependencies": {
     "q": "~1.0.0",
     "sc-optionify": "0.0.x",
-    "sc-request": "0.0.x",
+    "sc-request": "0.0.8",
     "sc-is": "0.0.x",
     "sc-useify": "0.0.x",
     "sc-extendify": "0.0.x",

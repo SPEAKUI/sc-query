@@ -56,7 +56,7 @@ var Query = extendify( {
 
     self.__parameters = {};
     self.__queries = {};
-
+    self.__headers = {};
   },
 
   /**
@@ -136,6 +136,27 @@ var Query = extendify( {
   },
 
   /**
+   * Gets or sets a header by a key/value pair. A header is the key/value pair which is added to the headers of the request.
+   *
+   * @method header
+   * @chainable
+   * @param  {String} key   The header key
+   * @param  {String} value The header value
+   * @return {Mixed} If `key` and `value` was given `self` is returned, if only `key` was given, the value of that key is returned.
+   */
+  header: function ( key, value ) {
+    var self = this;
+
+    if ( self.__headers.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__headers[ key ];
+    }
+
+    self.__headers[ key ] = value;
+
+    return self;
+  },
+
+  /**
    * Executes the query by triggering the XHR request to the given url (end point).
    *
    * @method execute
@@ -151,7 +172,8 @@ var Query = extendify( {
       type: self.type,
       url: self.url,
       data: self.__parameters,
-      query: self.__queries
+      query: self.__queries,
+      header: self.__headers
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
