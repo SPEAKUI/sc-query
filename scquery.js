@@ -64,6 +64,10 @@ var Query = extendify( {
     self.__parameters = {};
     self.__queries = {};
     self.__headers = {};
+
+    if( self.options.headers ) {
+      self.__headers = utils.merge( self.__headers, self.options.headers );
+    }
   },
 
   /**
