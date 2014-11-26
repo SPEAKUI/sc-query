@@ -31,4 +31,17 @@ describe( "sc-query", function () {
 
   } );
 
+  it( "new headers should merge in to the the existing", function () {
+    var headers = {
+      "x-request-with": "test"
+    };
+    var personQuery = new Query( "/person", "GET", { headers: headers } );
+
+    personQuery.__headers["x-request-with"].should.eql("test");
+    
+    personQuery.header("x-request-with2", "test");
+
+    personQuery.__headers["x-request-with2"].should.eql("test");
+  } );
+
 } );
